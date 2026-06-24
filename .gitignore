@@ -61,4 +61,4 @@ docker-compose.override.yml
 # ============== 关键配置文件（每个开发者/服务器自己创建）==============
 # pgadmin-servers.json 含服务器地址，可以共享
 # 但任何含真实密码的 json 配置都不要提交
-pgadmin-servers.local.json
+pgadmin-servers.local.jsonindex.html.backup
