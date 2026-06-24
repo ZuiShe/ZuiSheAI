@@ -1,0 +1,52 @@
+# ============== 敏感配置（绝对不能提交）==============
+.env
+.env.*
+!.env.example
+
+# ============== Docker 数据卷（数据库/缓存的实际数据）==============
+postgres-data/
+pgadmin-data/
+**/postgres-data/
+**/pgadmin-data/
+
+# ============== 依赖目录（每个开发者本地安装，不应入仓）==============
+node_modules/
+**/node_modules/
+*/node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# ============== 构建产物（前端/后端编译产物）==============
+dist/
+build/
+*/dist/
+*/build/
+unpackage/
+*/unpackage/
+
+# ============== 日志 ==============
+*.log
+logs/
+*/logs/
+
+# ============== IDE / 编辑器 ==============
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ============== Docker 相关 ==============
+docker-compose.override.yml
+
+# ============== 系统临时文件 ==============
+*.tmp
+*.bak
+*.orig
+
+# ============== 关键配置文件（每个开发者/服务器自己创建）==============
+# pgadmin-servers.json 含服务器地址，可以共享
+# 但任何含真实密码的 json 配置都不要提交
+pgadmin-servers.local.json

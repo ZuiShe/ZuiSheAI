@@ -1,0 +1,15 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "zuishe-postgres",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "zsdb",
+      "Username": "zsdb",
+      "SSLMode": "prefer",
+      "Favorite": true,
+      "Comment": "zuishe.com.cn 业务数据库"
+    }
+  }
+}

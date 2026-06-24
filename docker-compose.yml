@@ -1,0 +1,106 @@
+version: "3.9"
+
+services:
+  # ============== 数据库 PostgreSQL ==============
+  postgres:
+    image: postgres:16-alpine
+    container_name: zuishe-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Asia/Shanghai
+    volumes:
+      - /home/ubuntu/zuishe/postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend-net
+    # db 容器只对 backend 开放端口，外部不能直接连
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============== pgAdmin 4 数据库管理工具 ==============
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: zuishe-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PW}
+      PGADMIN_LISTEN_PORT: 80
+      # 允许通过域名访问（不是仅 localhost）
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGADMIN_LISTEN_ADDRESS: "0.0.0.0"
+    volumes:
+      - /home/ubuntu/zuishe/pgadmin-data:/var/lib/pgadmin
+      - /home/ubuntu/zuishe/pgadmin-servers.json:/pgadmin4/servers.json:ro
+    networks:
+      - backend-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ============== 后端 NestJS ==============
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: zuishe-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Asia/Shanghai
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend-net
+
+  # ============== 前端 uni-app H5 ==============
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: zuishe-frontend
+    restart: unless-stopped
+    networks:
+      - backend-net
+    depends_on:
+      - backend
+
+  # ============== 反向代理 Caddy（自动 HTTPS）==============
+  caddy:
+    image: caddy:2-alpine
+    container_name: zuishe-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - backend-net
+    depends_on:
+      - frontend
+      - backend
+    environment:
+      CADDY_ADMIN_EMAIL: ${CADDY_ADMIN_EMAIL}
+
+networks:
+  backend-net:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
