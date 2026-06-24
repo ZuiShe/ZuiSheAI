@@ -1,51 +1,15 @@
 import { NestFactory } from '@nestjs/core';
-import { Module, Controller, Get } from '@nestjs/common';
+import { Module, Controller, Get, Res, Query, HttpStatus } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Entity, PrimaryColumn, Column, Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-
-// ============== 实体定义 ==============
-@Entity('spu')
-class Spu {
-  @PrimaryColumn({ type: 'bigint' })
-  id: string;
-
-  @Column({ type: 'bigint' })
-  category_id: string;
-
-  @Column({ type: 'bigint', nullable: true })
-  brand_id: string;
-
-  @Column({ type: 'varchar', length: 200 })
-  spu_name: string;
-
-  @Column({ type: 'varchar', length: 200, nullable: true })
-  spec: string;
-
-  @Column({ type: 'varchar', length: 20, default: '箱' })
-  unit: string;
-
-  @Column({ type: 'varchar', length: 500, nullable: true })
-  cover_image: string;
-
-  @Column({ type: 'numeric', precision: 5, scale: 2, nullable: true })
-  alcohol_content: number;
-
-  @Column({ type: 'smallint', default: 1 })
-  status: number;
-
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
-  created_at: Date;
-}
+import { TypeOrmModule, InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // ============== 控制器 ==============
 @Controller()
 class AppController {
-  constructor(
-    @InjectRepository(Spu)
-    private readonly spuRepo: Repository<Spu>,
-  ) {}
+  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
   @Get('/health')
   health() {
@@ -65,19 +29,23 @@ class AppController {
     };
   }
 
+  // ============ 业务 API：用原生 SQL，避免 TypeORM 实体同步问题 ============
+
   @Get('/api/products')
   async getProducts() {
     try {
-      const products = await this.spuRepo.find({
-        take: 10,
-        order: { id: 'ASC' },
-      });
+      const rows = await this.dataSource.query(
+        `SELECT id, spu_name, spec, unit, alcohol_content, status, cover_image
+         FROM spu
+         ORDER BY id ASC
+         LIMIT 10`,
+      );
       return {
         success: true,
-        count: products.length,
-        data: products,
+        count: rows.length,
+        data: rows,
       };
-    } catch (err) {
+    } catch (err: any) {
       return {
         success: false,
         error: err.message,
@@ -88,23 +56,70 @@ class AppController {
   @Get('/api/categories')
   async getCategories() {
     try {
-      const cats = await this.spuRepo.query(
-        `SELECT id, category_id, COUNT(*) as product_count
-         FROM spu
-         GROUP BY id, category_id
-         LIMIT 20`,
+      const rows = await this.dataSource.query(
+        `SELECT c.id, c.name, COUNT(s.id) AS product_count
+         FROM category c
+         LEFT JOIN spu s ON s.category_id = c.id
+         GROUP BY c.id, c.name
+         ORDER BY c.id`,
       );
       return {
         success: true,
-        count: cats.length,
-        data: cats,
+        count: rows.length,
+        data: rows,
       };
-    } catch (err) {
+    } catch (err: any) {
       return {
         success: false,
         error: err.message,
       };
     }
+  }
+
+  @Get('/api/stats')
+  async getStats() {
+    try {
+      const stats = await this.dataSource.query(`
+        SELECT
+          (SELECT count(*) FROM spu) AS total_products,
+          (SELECT count(*) FROM brand) AS total_brands,
+          (SELECT count(*) FROM category) AS total_categories,
+          (SELECT count(*) FROM supplier_product) AS total_supplier_products
+      `);
+      return {
+        success: true,
+        data: stats[0],
+      };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message,
+      };
+    }
+  }
+
+  // ========== 图片代理（绕过中文路径 URL 编码问题）==========
+  @Get('/api/image')
+  async serveImage(@Query('p') relativePath: string, @Res() res: any) {
+    if (!relativePath) {
+      return res.status(400).json({ success: false, error: '缺少 p 参数' });
+    }
+    // 防止路径遍历攻击
+    const safe = path.normalize(relativePath).replace(/^(\.\.[\/\\])+/, '');
+    const filePath = path.join('/app/uploads', safe);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, error: '文件不存在' });
+    }
+    // 根据扩展名设置 Content-Type
+    const ext = path.extname(filePath).toLowerCase();
+    const mime: Record<string, string> = {
+      '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+      '.png': 'image/png', '.gif': 'image/gif',
+      '.webp': 'image/webp', '.bmp': 'image/bmp',
+    };
+    res.set('Content-Type', mime[ext] || 'application/octet-stream');
+    res.set('Cache-Control', 'public, max-age=86400');
+    fs.createReadStream(filePath).pipe(res);
   }
 }
 
@@ -121,12 +136,10 @@ class AppController {
         username: cfg.get('DB_USER'),
         password: cfg.get('DB_PASSWORD'),
         database: cfg.get('DB_NAME'),
-        entities: [Spu],
+        autoLoadEntities: true,
         synchronize: false,
-        logging: ['error', 'warn'],
       }),
     }),
-    TypeOrmModule.forFeature([Spu]),
   ],
   controllers: [AppController],
 })

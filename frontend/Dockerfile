@@ -1,16 +1,36 @@
-# 前端镜像：uni-app H5 静态站点
-# 当前为占位版（让你先把架构跑通），真实 uni-app 代码到位后
-# 把代码 COPY 进 /app，执行 npm run build:h5，把产物复制到 nginx 目录即可。
+# ========== 第一阶段：构建 uni-app H5 ==========
+FROM node:20-alpine AS builder
 
+WORKDIR /build
+
+# 先复制依赖文件，利用 Docker 缓存
+COPY package.json ./
+COPY vite.config.ts ./
+COPY tsconfig.json ./
+COPY index.html ./
+
+# 安装依赖（npm install 会比较慢，1-3 分钟）
+# 设置 npm 镜像为国内加速
+RUN npm config set registry https://registry.npmmirror.com && \
+    npm install --no-audit --no-fund
+
+# 复制源码
+COPY src ./src
+
+# 构建 H5
+RUN npm run build:h5
+
+# ========== 第二阶段：nginx 服务静态文件 ==========
 FROM nginx:1.27-alpine
 
-# 用一份简单的占位首页（保证服务能起、能验证 HTTPS）
-COPY index.html /usr/share/nginx/html/index.html
+# nginx 配置
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# 强制保证静态文件可读（nginx worker 用户是 nginx）
-RUN chmod -R 644 /usr/share/nginx/html/ && \
-    chmod 755 /usr/share/nginx/html
+# uni-app H5 构建产物在 dist/build/h5
+COPY --from=builder /build/dist/build/h5 /usr/share/nginx/html
+
+# 权限
+RUN chmod -R 755 /usr/share/nginx/html
 
 EXPOSE 80
 

@@ -50,6 +50,8 @@ services:
       dockerfile: Dockerfile
     container_name: zuishe-backend
     restart: unless-stopped
+    volumes:
+      - ./uploads:/app/uploads:ro
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -72,6 +74,8 @@ services:
       dockerfile: Dockerfile
     container_name: zuishe-frontend
     restart: unless-stopped
+    volumes:
+      - ./uploads:/usr/share/nginx/html/uploads
     networks:
       - backend-net
     depends_on:
@@ -89,7 +93,6 @@ services:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-      - /home/ubuntu/zuishe/uploads:/srv/uploads:ro
     networks:
       - backend-net
     depends_on:
