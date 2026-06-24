@@ -34,6 +34,7 @@ logs/
 # ============== IDE / 编辑器 ==============
 .vscode/
 .idea/
+.codebuddy/
 *.swp
 *.swo
 .DS_Store
