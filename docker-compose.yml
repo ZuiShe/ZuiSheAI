@@ -89,6 +89,7 @@ services:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      - /home/ubuntu/zuishe/uploads:/srv/uploads:ro
     networks:
       - backend-net
     depends_on:

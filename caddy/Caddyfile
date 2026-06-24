@@ -1,13 +1,21 @@
-# Caddy 配置：自动 HTTPS + 反向代理
+# Caddy 配置: 自动 HTTPS + 反向代理
 
 # 全局设置
 {
     email {$CADDY_ADMIN_EMAIL}
 }
 
-# ========== 前端 H5 ==========
+# ========== 前端 H5 + 静态文件 ==========
 app.zuishe.com.cn {
     encode gzip zstd
+
+    # 商品图片等上传资源
+    handle_path /uploads/* {
+        root * /srv/uploads
+        file_server
+    }
+
+    # 前端 H5
     reverse_proxy frontend:80
 }
 
@@ -17,7 +25,7 @@ be.zuishe.com.cn {
     reverse_proxy backend:3000
 }
 
-# ========== 数据库管理工具（pgAdmin）==========
+# ========== 数据库管理工具 (pgAdmin) ==========
 db.zuishe.com.cn {
     encode gzip zstd
     reverse_proxy pgadmin:80

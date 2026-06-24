@@ -9,6 +9,17 @@ pgadmin-data/
 **/postgres-data/
 **/pgadmin-data/
 
+# ============== 上传文件（图片/文档，应存对象存储）==============
+uploads/
+**/uploads/
+
+# ============== 大型数据导入文件（>500KB 的 SQL 不入仓）==============
+# 数据库 schema/迁移脚本入仓；真实业务数据不入仓
+import_products_data.sql
+products_data.sql
+seed_*.sql
+fixtures.sql
+
 # ============== 依赖目录（每个开发者本地安装，不应入仓）==============
 node_modules/
 **/node_modules/
