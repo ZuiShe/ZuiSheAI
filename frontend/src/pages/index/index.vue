@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 
-// ============== Composable: useProducts ==============
+// ============== 类型 ==============
 interface Product {
   id: string;
   spu_name: string;
@@ -12,15 +12,18 @@ interface Product {
   cover_image: string | null;
 }
 
+// ============== 工具函数 ==============
 function imageUrl(cover: string | null): string {
-  if (!cover) return '';
-  // 从 "https://app.zuishe.com.cn/uploads/xxx" 提取 "xxx"
-  const idx = cover.indexOf('/uploads/');
+  if (!cover) return "";
+  const idx = cover.indexOf("/uploads/");
   if (idx === -1) return cover;
-  const relativePath = cover.substring(idx + 9); // 跳过 "/uploads/"
-  return 'https://be.zuishe.com.cn/api/image?p=' + encodeURIComponent(relativePath);
+  return (
+    "https://be.zuishe.com.cn/api/image?p=" +
+    encodeURIComponent(cover.substring(idx + 9))
+  );
 }
 
+// ============== Composable ==============
 function useProducts() {
   const products = ref<Product[]>([]);
   const loading = ref(true);
@@ -57,12 +60,15 @@ loadProducts();
 
 <template>
   <view class="page">
-    <view class="banner card">
-      <view class="badge">🔥 新人专享</view>
-      <view class="title">首单满 1000 减 100</view>
-      <view class="subtitle">注册即享批发价 · 全国配送</view>
+    <!-- Hero Banner -->
+    <view class="hero">
+      <view class="hero-badge">🔥 新人专享</view>
+      <text class="hero-title">首单满 1000 减 100</text>
+      <text class="hero-subtitle">注册即享批发价 · 全国配送 · 正品保障</text>
+      <view class="btn-primary hero-btn">立即查看 →</view>
     </view>
 
+    <!-- 商品列表 -->
     <view class="section">
       <view class="section-header">
         <text class="section-title">📦 实时商品</text>
@@ -70,121 +76,168 @@ loadProducts();
       </view>
 
       <view v-if="loading" class="empty-state">加载中…</view>
-      <view v-else-if="error" class="empty-state error">{{ error }}</view>
-      <view v-else>
-        <view
-          v-for="p in products"
-          :key="p.id"
-          class="product-card card"
-        >
-          <view class="pc-head">
-            <image
-              v-if="p.cover_image"
-              :src="imageUrl(p.cover_image)"
-              mode="aspectFill"
-              class="pc-thumb"
-            />
-            <text v-else class="pc-icon">🍶</text>
-            <text class="pc-tag">ID: {{ p.id }}</text>
+      <view v-else-if="error" class="empty-state">{{ error }}</view>
+      <view v-else class="product-grid">
+        <view v-for="p in products" :key="p.id" class="card product-card">
+          <image
+            v-if="p.cover_image"
+            :src="imageUrl(p.cover_image)"
+            mode="aspectFill"
+            class="product-thumb"
+          />
+          <view v-else class="product-thumb product-thumb-placeholder">
+            <text>🍶</text>
           </view>
-          <view class="pc-title">{{ p.spu_name }}</view>
-          <view class="pc-spec">
-            <text v-if="p.alcohol_content">{{ p.alcohol_content }}° · </text>
-            <text>{{ p.unit }}</text>
+          <view class="product-info">
+            <text class="product-name">{{ p.spu_name }}</text>
+            <view class="product-meta">
+              <text v-if="p.alcohol_content" class="meta-text">
+                {{ p.alcohol_content }}° · {{ p.unit }}
+              </text>
+              <text v-else class="meta-text">{{ p.unit }}</text>
+            </view>
+            <view class="tag-hot">ID: {{ p.id }}</view>
           </view>
         </view>
       </view>
 
-      <button class="btn-primary" @click="loadProducts" style="margin-top: 30rpx;">
+      <view class="btn-primary refresh-btn" @click="loadProducts">
         刷新商品
-      </button>
+      </view>
     </view>
   </view>
 </template>
 
 <style scoped>
 .page {
-  padding: 20rpx;
+  padding: 32rpx;
 }
-.banner {
+
+/* Hero Banner */
+.hero {
   background: linear-gradient(135deg, #2858F8, #1A40C8);
-  color: white;
+  border-radius: var(--rounded-md);
+  padding: 64rpx 48rpx;
   text-align: center;
+  color: var(--color-on-primary);
+  margin-bottom: 40rpx;
+  box-shadow: var(--shadow-product);
 }
-.badge {
+.hero-badge {
   display: inline-block;
-  background: rgba(255,255,255,0.2);
-  padding: 4rpx 16rpx;
-  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 6rpx 20rpx;
+  border-radius: var(--rounded-pill);
   font-size: 24rpx;
+  margin-bottom: 24rpx;
+}
+.hero-title {
+  display: block;
+  font-size: 56rpx;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -1rpx;
   margin-bottom: 16rpx;
 }
-.title {
-  font-size: 36rpx;
-  font-weight: 700;
+.hero-subtitle {
   display: block;
-  margin-bottom: 8rpx;
-}
-.subtitle {
-  font-size: 24rpx;
+  font-size: 28rpx;
   opacity: 0.9;
+  margin-bottom: 32rpx;
 }
+.hero-btn {
+  background: var(--color-on-primary);
+  color: var(--color-primary);
+  display: inline-block;
+  padding: 16rpx 40rpx;
+}
+
+/* 区块标题 */
 .section {
-  margin-top: 30rpx;
+  margin-top: 0;
 }
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20rpx;
-  padding: 0 10rpx;
+  margin-bottom: 24rpx;
+  padding: 0 8rpx;
 }
 .section-title {
-  font-size: 32rpx;
-  font-weight: 700;
-  color: #1A1A2E;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: var(--color-ink);
 }
 .section-tag {
   font-size: 24rpx;
-  color: #999;
+  color: var(--color-body-muted);
 }
-.error {
-  color: #2858F8;
+
+/* 商品网格 */
+.product-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
 }
 .product-card {
-  margin-bottom: 20rpx;
-}
-.pc-head {
   display: flex;
-  justify-content: space-between;
+  flex-direction: row;
   align-items: center;
-  margin-bottom: 12rpx;
+  padding: 20rpx;
 }
-.pc-icon {
-  font-size: 40rpx;
-}
-.pc-thumb {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 8rpx;
+.product-thumb {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: var(--rounded-sm);
   object-fit: cover;
+  flex-shrink: 0;
+  background: var(--color-canvas-parchment);
 }
-.pc-tag {
-  background: #2858F8;
-  color: white;
-  padding: 4rpx 16rpx;
-  border-radius: 20rpx;
-  font-size: 22rpx;
+.product-thumb-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 80rpx;
 }
-.pc-title {
+.product-info {
+  flex: 1;
+  margin-left: 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+.product-name {
   font-size: 30rpx;
   font-weight: 600;
-  color: #1A1A2E;
-  margin-bottom: 8rpx;
+  color: var(--color-ink);
   line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-.pc-spec {
+.product-meta {
+  display: flex;
+  align-items: center;
+}
+.meta-text {
   font-size: 24rpx;
-  color: #999;
+  color: var(--color-body-muted);
+}
+
+.tag-hot {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: var(--rounded-sm);
+  align-self: flex-start;
+  margin-top: 4rpx;
+}
+
+.refresh-btn {
+  margin-top: 32rpx;
+  display: block;
+  text-align: center;
 }
 </style>
