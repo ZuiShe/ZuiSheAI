@@ -57,10 +57,10 @@ class AppController {
   async getCategories() {
     try {
       const rows = await this.dataSource.query(
-        `SELECT c.id, c.name, COUNT(s.id) AS product_count
+        `SELECT c.id, c.cat_name, COUNT(s.id) AS product_count
          FROM category c
          LEFT JOIN spu s ON s.category_id = c.id
-         GROUP BY c.id, c.name
+         GROUP BY c.id, c.cat_name
          ORDER BY c.id`,
       );
       return {
